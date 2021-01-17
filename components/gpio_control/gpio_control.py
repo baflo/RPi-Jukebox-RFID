@@ -26,8 +26,8 @@ def getFunctionCall(function_name):
     return lambda *args: None
 
 
-def generate_device(config, deviceName):
-    print(deviceName)
+def generate_device(config, deviceName, allDevices):
+    logger.info("DeviceName {}".format(deviceName))
     device_type = config.get('Type')
     if deviceName.lower() == 'VolumeControl'.lower():
         return VolumeControl(config)
@@ -51,11 +51,14 @@ def generate_device(config, deviceName):
                             edge=config.get('edge', fallback='FALLING'),
                             hold_repeat=config.getboolean('hold_repeat', False),
                             hold_time=config.getfloat('hold_time', fallback=0.3),
-                            pull_up_down=config.get('pull_up_down', fallback=GPIO.PUD_UP))
+                            pull_up_down=config.get('pull_up_down', fallback=GPIO.PUD_UP),
+                            signalLed=config.get("signalLed"), signalLedTime=config.getfloat("signalLedTime"),
+                            allDevices=allDevices)
     elif device_type == 'LED':
         return LED(config.getint('Pin'),
                             name=deviceName,
                             initial_value=config.getboolean('initial_value', fallback=True))
+
     elif device_type == 'MPDStatusLED':
         return MPDStatusLED(config.getint('Pin'),
                             host=config.get('host', fallback='localhost'),
@@ -79,7 +82,7 @@ def get_all_devices(config):
     for section in config.sections():
         if config.getboolean(section, 'enabled', fallback=False):
             logger.info('adding GPIO-Device, {}'.format(section))
-            device = generate_device(config[section], section)
+            device = generate_device(config[section], section, devices)
             if device is not None:
                 devices.append(device)
             else:

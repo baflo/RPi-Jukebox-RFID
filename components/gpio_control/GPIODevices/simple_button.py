@@ -2,6 +2,7 @@ import time
 from signal import pause
 import logging
 import RPi.GPIO as GPIO
+import threading
 GPIO.setmode(GPIO.BCM)
 
 logger = logging.getLogger(__name__)
@@ -58,12 +59,16 @@ def checkGpioStaysInState(holdingTime, gpioChannel, gpioHoldingState):
 
 class SimpleButton:
     def __init__(self, pin, action=lambda *args: None, name=None, bouncetime=500, edge=GPIO.FALLING,
-                 hold_time=.1, hold_repeat=False, pull_up_down=GPIO.PUD_UP):
+                 hold_time=.1, hold_repeat=False, pull_up_down=GPIO.PUD_UP, signalLed=None, signalLedTime=0.2,
+                 allDevices=[]):
         self.edge = parse_edge_key(edge)
         self.hold_time = hold_time
         self.hold_repeat = hold_repeat
         self.pull_up = True
         self.pull_up_down = parse_pull_up_down(pull_up_down)
+        self.signalLed = signalLed
+        self.signalLedTime = signalLedTime
+        self.allDevices = allDevices
 
         self.pin = pin
         self.name = name
@@ -79,9 +84,17 @@ class SimpleButton:
             args = args[1:]
             logger.debug('args after: {}'.format(args))
 
+        logger.info("SIGNAL LED: {}".format(self.signalLed))
+        logger.info("SIGNAL LED-TIME: {}".format(self.signalLedTime))
+        if self.signalLed:
+           for device in self.allDevices:
+                if device.name == self.signalLed:
+                     device.on()
+                     threading.Timer(self.signalLedTime, lambda: device.off()).start()
+
         if self.hold_repeat:
             return self.holdAndRepeatHandler(*args)
-        logger.info('{}: executre callback'.format(self.name))
+        logger.info('{}: execute callback'.format(self.name))
         return self.when_pressed(*args)
 
     @property
